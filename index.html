@@ -53,6 +53,22 @@
             Drag and drop a file here, or click to pick one. Share link is generated automatically.
           </p>
 
+          <div class="security-controls glass-soft">
+            <label class="switch-row" for="encryptionToggle">
+              <input type="checkbox" id="encryptionToggle" />
+              <span>Enable passphrase AES-GCM encryption</span>
+            </label>
+            <input
+              type="password"
+              id="passphraseInput"
+              placeholder="Optional passphrase"
+              autocomplete="new-password"
+            />
+            <p class="helper-text">
+              When enabled, receiver must enter the same passphrase to decrypt chunks.
+            </p>
+          </div>
+
           <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Drop file zone">
             <input type="file" id="fileInput" />
             <div class="drop-content">
@@ -62,15 +78,27 @@
           </div>
 
           <div class="action-row">
+            <button class="btn btn-primary" id="chooseFileBtn">
+              Choose File
+            </button>
             <button class="btn btn-primary" id="generateLinkBtn" disabled>
               Generate Share Link
             </button>
             <button class="btn btn-ghost" id="copyLinkBtn" disabled>Copy Link</button>
+            <button class="btn btn-ghost" id="reconnectBtn">Reconnect</button>
           </div>
 
           <div class="share-link-wrap">
             <label for="shareLink" class="status-label">Share URL</label>
             <input type="text" id="shareLink" readonly placeholder="Link appears after selecting a file" />
+          </div>
+
+          <div class="qr-wrap glass-soft">
+            <div class="qr-head">
+              <p class="status-label">Mobile Pairing</p>
+              <button class="btn btn-ghost small" id="refreshQrBtn">Refresh QR</button>
+            </div>
+            <div class="qr-code" id="qrCode" aria-label="Share link QR code"></div>
           </div>
         </article>
 
@@ -125,6 +153,7 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

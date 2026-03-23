@@ -162,6 +162,48 @@ h2 {
   line-height: 1.45;
 }
 
+.glass-soft {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.security-controls {
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  margin-bottom: 8px;
+}
+
+.switch-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-green);
+}
+
+#passphraseInput {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.34);
+  color: var(--text);
+  padding: 10px;
+  margin-bottom: 7px;
+}
+
+.helper-text {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
 .drop-zone {
   position: relative;
   min-height: 210px;
@@ -206,6 +248,12 @@ h2 {
   opacity: 1;
 }
 
+.drop-zone.disabled {
+  opacity: 0.72;
+  cursor: not-allowed;
+  border-style: solid;
+}
+
 @keyframes neonPulse {
   0% {
     box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.45), 0 0 18px rgba(16, 185, 129, 0.25);
@@ -231,6 +279,7 @@ h2 {
 
 .action-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 14px;
 }
@@ -283,6 +332,38 @@ h2 {
   background: rgba(0, 0, 0, 0.32);
   color: var(--text);
   padding: 10px;
+}
+
+.qr-wrap {
+  margin-top: 14px;
+  padding: 10px;
+}
+
+.qr-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.qr-code {
+  min-height: 140px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.qr-code img,
+.qr-code canvas {
+  border-radius: 8px;
+  width: 140px;
+  height: 140px;
+  background: #ffffff;
+  padding: 6px;
 }
 
 .metric-grid {
@@ -476,10 +557,31 @@ h2 {
   }
 
   .action-row {
-    flex-direction: column;
+      display: grid;
+      grid-template-columns: 1fr;
   }
 
   .metric-grid {
     grid-template-columns: 1fr;
   }
+
+    .btn {
+      width: 100%;
+      min-height: 42px;
+    }
+
+    .drop-zone {
+      min-height: 190px;
+    }
 }
+
+  @media (hover: hover) {
+    .panel {
+      transition: border-color 0.25s ease, transform 0.25s ease;
+    }
+
+    .panel:hover {
+      transform: translateY(-2px);
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+  }
