@@ -6,7 +6,9 @@ const RECONNECT_BASE_MS = 1200;
 const RECONNECT_CAP_MS = 10000;
 const PBKDF2_ROUNDS = 250000;
 const HISTORY_KEY = "nebulaShareHistoryV1";
+const LOG_KEY = "nebulaShareLogsV1";
 const ADMIN_PASSCODE = "8574";
+const ADMIN_AUTH_KEY = "nebulaAdminAuthUntil";
 
 const ui = {
   selfPeerId: document.getElementById("selfPeerId"),
@@ -47,6 +49,10 @@ const ui = {
   adminPasscodeInput: document.getElementById("adminPasscodeInput"),
   adminUnlockBtn: document.getElementById("adminUnlockBtn"),
   adminCancelBtn: document.getElementById("adminCancelBtn"),
+  incomingPromptModal: document.getElementById("incomingPromptModal"),
+  incomingPromptText: document.getElementById("incomingPromptText"),
+  incomingAcceptBtn: document.getElementById("incomingAcceptBtn"),
+  incomingDeclineBtn: document.getElementById("incomingDeclineBtn"),
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -79,6 +85,7 @@ const state = {
     sessions: {},
     activeDecryptKey: null,
     activeDecryptSalt: "",
+    pendingSessionId: "",
   },
   metrics: {
     startTime: 0,
@@ -88,6 +95,7 @@ const state = {
     readBytes: () => 0,
   },
   history: loadHistory(),
+  logs: loadLogs(),
 };
 
 init();
@@ -278,6 +286,20 @@ function bindUI() {
   ui.adminModal.addEventListener("click", (event) => {
     if (event.target === ui.adminModal) {
       closeAdminModal();
+    }
+  });
+
+  ui.incomingAcceptBtn.addEventListener("click", () => {
+    acceptIncomingSession();
+  });
+
+  ui.incomingDeclineBtn.addEventListener("click", () => {
+    declineIncomingSession();
+  });
+
+  ui.incomingPromptModal.addEventListener("click", (event) => {
+    if (event.target === ui.incomingPromptModal) {
+      declineIncomingSession();
     }
   });
 }
@@ -524,6 +546,13 @@ async function setSelectedFiles(files) {
   }
 
   for (const file of cleanFiles) {
+    const signature = `${file.name}|${file.size}|${file.lastModified || 0}`;
+    const exists = state.sender.queue.some((item) => item.fileSignature === signature);
+    if (exists) {
+      log(`Skipped duplicate queue item: ${file.name}`);
+      continue;
+    }
+
     const queueItem = await createQueueItem(file, encrypted, passphrase);
     state.sender.queue.push(queueItem);
     log(`Queued: ${file.name}`);
@@ -721,12 +750,18 @@ function getActiveOrNextQueueItem() {
     return null;
   }
 
-  const active = state.sender.queue.find((item) => item.queueId === state.sender.activeQueueId);
+  const active = state.sender.queue.find(
+    (item) => item.queueId === state.sender.activeQueueId && item.status !== "done" && item.status !== "declined"
+  );
   if (active) {
     return active;
   }
 
-  return state.sender.queue.find((item) => item.status !== "done" && item.status !== "error") || null;
+  return (
+    state.sender.queue.find(
+      (item) => item.status !== "done" && item.status !== "error" && item.status !== "declined"
+    ) || null
+  );
 }
 
 function announceCurrentMeta() {
@@ -1008,6 +1043,11 @@ async function handleData(payload) {
 
   if (payload.type === "file-end") {
     await finalizeDownload(payload.sessionId);
+    return;
+  }
+
+  if (payload.type === "file-decline") {
+    handleFileDecline(payload);
   }
 }
 
@@ -1021,6 +1061,12 @@ async function handleResumeRequest(payload) {
     getActiveOrNextQueueItem();
 
   if (!item) {
+    return;
+  }
+
+  if (item.status === "done" || item.status === "declined") {
+    state.sender.activeQueueId = "";
+    pumpSenderQueue();
     return;
   }
 
@@ -1054,13 +1100,33 @@ async function handleFileMeta(payload) {
     receivedCount: 0,
     bytesReceived: 0,
     completed: false,
+    finalizing: false,
     startedAt: Date.now(),
   };
 
   session.meta = payload;
   session.hashHex = payload.hashHex || "";
+  session.accepted = session.accepted || false;
+  session.declined = session.declined || false;
   state.receiver.sessions[payload.sessionId] = session;
 
+  if (!session.accepted && !session.declined) {
+    state.receiver.pendingSessionId = payload.sessionId;
+    openIncomingPrompt(payload);
+    return;
+  }
+
+  if (session.declined) {
+    safeSend({ type: "file-decline", sessionId: payload.sessionId });
+    return;
+  }
+
+  if (session.accepted) {
+    startReceiverSession(payload, session);
+  }
+}
+
+function startReceiverSession(payload, session) {
   startSpeedTicker(payload.size, () => session.bytesReceived);
   setStatus(`Receiving ${payload.name}`);
   updateBatchProgressReceiver(payload);
@@ -1074,6 +1140,10 @@ async function handleFileMeta(payload) {
 async function handleFileChunk(payload) {
   const session = state.receiver.sessions[payload.sessionId || state.activeSessionId];
   if (!session || !session.meta) {
+    return;
+  }
+
+  if (!session.accepted || session.declined) {
     return;
   }
 
@@ -1129,6 +1199,10 @@ async function finalizeDownload(sessionId) {
     return;
   }
 
+  if (session.completed || session.finalizing) {
+    return;
+  }
+
   if (session.receivedCount !== session.meta.totalChunks) {
     const missing = session.meta.totalChunks - session.receivedCount;
     setStatus("Waiting for reconnect");
@@ -1137,6 +1211,8 @@ async function finalizeDownload(sessionId) {
     scheduleReceiverReconnect();
     return;
   }
+
+  session.finalizing = true;
 
   const blob = new Blob(session.chunks, { type: session.meta.mime });
 
@@ -1160,6 +1236,7 @@ async function finalizeDownload(sessionId) {
         integrity: "Mismatch",
         status: "error",
       });
+      session.finalizing = false;
       return;
     }
   } else {
@@ -1172,6 +1249,7 @@ async function finalizeDownload(sessionId) {
   log(`Download auto-triggered: ${session.meta.name}`, "success");
 
   session.completed = true;
+  session.finalizing = false;
   stopSpeedTicker();
   addHistoryEntry({
     direction: "received",
@@ -1183,6 +1261,86 @@ async function finalizeDownload(sessionId) {
     integrity: integrityStatus,
     status: "success",
   });
+}
+
+function openIncomingPrompt(payload) {
+  ui.incomingPromptText.textContent = `Incoming file: ${payload.name} (${formatBytes(payload.size)}). Accept download?`;
+  ui.incomingPromptModal.classList.add("show");
+  ui.incomingPromptModal.setAttribute("aria-hidden", "false");
+}
+
+function closeIncomingPrompt() {
+  ui.incomingPromptModal.classList.remove("show");
+  ui.incomingPromptModal.setAttribute("aria-hidden", "true");
+}
+
+function acceptIncomingSession() {
+  const sessionId = state.receiver.pendingSessionId;
+  if (!sessionId) {
+    closeIncomingPrompt();
+    return;
+  }
+
+  const session = state.receiver.sessions[sessionId];
+  if (!session) {
+    closeIncomingPrompt();
+    return;
+  }
+
+  session.accepted = true;
+  session.declined = false;
+  state.receiver.pendingSessionId = "";
+  closeIncomingPrompt();
+  startReceiverSession(session.meta, session);
+}
+
+function declineIncomingSession() {
+  const sessionId = state.receiver.pendingSessionId;
+  if (!sessionId) {
+    closeIncomingPrompt();
+    return;
+  }
+
+  const session = state.receiver.sessions[sessionId];
+  if (session) {
+    session.declined = true;
+    session.accepted = false;
+  }
+
+  safeSend({ type: "file-decline", sessionId });
+  log(`Receiver declined session ${sessionId}.`);
+  state.receiver.pendingSessionId = "";
+  closeIncomingPrompt();
+}
+
+function handleFileDecline(payload) {
+  if (state.role !== "sender") {
+    return;
+  }
+
+  const item = state.sender.queue.find((entry) => entry.sessionId === payload.sessionId);
+  if (!item) {
+    return;
+  }
+
+  item.status = "declined";
+  log(`Receiver declined file: ${item.name}`, "error");
+  addHistoryEntry({
+    direction: "sent",
+    name: item.name,
+    size: item.size,
+    peerId: state.remoteId,
+    speedMbps: 0,
+    encrypted: item.encrypted,
+    integrity: "Declined",
+    status: "declined",
+  });
+
+  state.sender.activeQueueId = "";
+  renderQueue();
+  updateBatchProgress();
+  refreshShareLink(false);
+  pumpSenderQueue();
 }
 
 function autoDownload(blob, filename) {
@@ -1540,9 +1698,9 @@ function unlockAdmin() {
     return;
   }
 
-  sessionStorage.setItem("nebulaAdminUnlocked", "1");
+  localStorage.setItem(ADMIN_AUTH_KEY, String(Date.now() + 10 * 60 * 1000));
   closeAdminModal();
-  window.open("admin.html", "_blank", "noopener");
+  window.location.href = "admin.html";
 }
 
 function escapeHtml(text) {
@@ -1611,6 +1769,31 @@ function log(message, type = "") {
   }
 
   ui.logConsole.scrollTop = ui.logConsole.scrollHeight;
+
+  state.logs.unshift({
+    at: new Date().toISOString(),
+    type,
+    message,
+  });
+  state.logs = state.logs.slice(0, 300);
+  persistLogs();
+}
+
+function persistLogs() {
+  localStorage.setItem(LOG_KEY, JSON.stringify(state.logs));
+}
+
+function loadLogs() {
+  try {
+    const raw = localStorage.getItem(LOG_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
 }
 
 let toastTimer = null;

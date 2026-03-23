@@ -607,6 +607,10 @@ h2 {
   display: grid;
 }
 
+.hidden-user {
+  display: none;
+}
+
 .modal-card {
   width: min(400px, 92vw);
   padding: 18px;

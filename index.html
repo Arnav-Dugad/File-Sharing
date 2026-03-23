@@ -37,7 +37,7 @@
         </div>
       </header>
 
-      <section class="status-grid">
+      <section class="status-grid hidden-user">
         <article class="glass status-card">
           <p class="status-label">Your Peer ID</p>
           <p class="status-value" id="selfPeerId">Generating...</p>
@@ -61,7 +61,7 @@
             Drag and drop a file here, or click to pick one. Share link is generated automatically.
           </p>
 
-          <div class="security-controls glass-soft">
+          <div class="security-controls glass-soft hidden-user">
             <label class="switch-row" for="encryptionToggle">
               <input type="checkbox" id="encryptionToggle" />
               <span>Enable passphrase AES-GCM encryption</span>
@@ -101,7 +101,7 @@
             <input type="text" id="shareLink" readonly placeholder="Link appears after selecting a file" />
           </div>
 
-          <div class="qr-wrap glass-soft">
+          <div class="qr-wrap glass-soft hidden-user">
             <div class="qr-head">
               <p class="status-label">Mobile Pairing</p>
               <button class="btn btn-ghost small" id="refreshQrBtn">Refresh QR</button>
@@ -165,7 +165,7 @@
         </article>
       </section>
 
-      <section class="glass panel logs-panel">
+      <section class="glass panel logs-panel hidden-user">
         <div class="logs-header">
           <h2>Live Logs</h2>
           <button class="btn btn-ghost small" id="clearLogsBtn">Clear</button>
@@ -173,7 +173,7 @@
         <div id="logConsole" class="log-console" aria-live="polite"></div>
       </section>
 
-      <section class="glass panel history-panel">
+      <section class="glass panel history-panel hidden-user">
         <div class="logs-header">
           <h2>Transfer History</h2>
           <button class="btn btn-ghost small" id="clearHistoryBtn">Clear</button>
@@ -190,6 +190,17 @@
         <div class="action-row">
           <button class="btn btn-primary" id="adminUnlockBtn">Unlock</button>
           <button class="btn btn-ghost" id="adminCancelBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-shell" id="incomingPromptModal" aria-hidden="true">
+      <div class="modal-card glass">
+        <h2>Incoming File</h2>
+        <p class="panel-note" id="incomingPromptText">A sender wants to share a file.</p>
+        <div class="action-row">
+          <button class="btn btn-primary" id="incomingAcceptBtn">Accept</button>
+          <button class="btn btn-ghost" id="incomingDeclineBtn">Decline</button>
         </div>
       </div>
     </div>
