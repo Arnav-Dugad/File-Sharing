@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nebula Share Admin</title>
+    <meta name="theme-color" content="#0a0a0c" />
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="card">
+        <h1>Admin Dashboard</h1>
+        <p>Transfer analytics from local device history.</p>
+      </header>
+
+      <section class="stats-grid">
+        <article class="card stat">
+          <p class="label">Total Transfers</p>
+          <h2 id="totalTransfers">0</h2>
+        </article>
+        <article class="card stat">
+          <p class="label">Success Rate</p>
+          <h2 id="successRate">0%</h2>
+        </article>
+        <article class="card stat">
+          <p class="label">Avg Speed</p>
+          <h2 id="avgSpeed">0 MB/s</h2>
+        </article>
+        <article class="card stat">
+          <p class="label">Data Moved</p>
+          <h2 id="totalData">0 MB</h2>
+        </article>
+      </section>
+
+      <section class="card table-wrap">
+        <div class="table-head">
+          <h2>History</h2>
+          <button id="clearAdminHistoryBtn">Clear</button>
+        </div>
+        <div id="adminHistoryTable" class="table"></div>
+      </section>
+    </main>
+
+    <script src="admin.js"></script>
+  </body>
+</html>
