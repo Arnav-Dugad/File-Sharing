@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nebula Share - P2P File Transfer</title>
+    <meta
+      name="description"
+      content="High-performance peer-to-peer file sharing with WebRTC, chunked transfer, and live diagnostics."
+    />
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="bg-orb orb-a" aria-hidden="true"></div>
+    <div class="bg-orb orb-b" aria-hidden="true"></div>
+
+    <main class="app-shell">
+      <header class="app-header glass">
+        <div>
+          <p class="eyebrow">Peer-to-Peer File Sharing</p>
+          <h1>Nebula Share</h1>
+          <p class="subtitle">
+            Direct browser transfer over WebRTC with 16KB chunk streaming.
+          </p>
+        </div>
+        <div class="security-chip" id="securityChip">
+          WebRTC DTLS encryption active
+        </div>
+      </header>
+
+      <section class="status-grid">
+        <article class="glass status-card">
+          <p class="status-label">Your Peer ID</p>
+          <p class="status-value" id="selfPeerId">Generating...</p>
+        </article>
+
+        <article class="glass status-card">
+          <p class="status-label">Remote Peer ID</p>
+          <p class="status-value" id="remotePeerId">Waiting...</p>
+        </article>
+
+        <article class="glass status-card">
+          <p class="status-label">Connection</p>
+          <p class="status-value" id="connectionStatus">Idle</p>
+        </article>
+      </section>
+
+      <section class="main-grid">
+        <article class="glass panel drop-panel">
+          <h2>Drop Zone</h2>
+          <p class="panel-note">
+            Drag and drop a file here, or click to pick one. Share link is generated automatically.
+          </p>
+
+          <div class="security-controls glass-soft">
+            <label class="switch-row" for="encryptionToggle">
+              <input type="checkbox" id="encryptionToggle" />
+              <span>Enable passphrase AES-GCM encryption</span>
+            </label>
+            <input
+              type="password"
+              id="passphraseInput"
+              placeholder="Optional passphrase"
+              autocomplete="new-password"
+            />
+            <p class="helper-text">
+              When enabled, receiver must enter the same passphrase to decrypt chunks.
+            </p>
+          </div>
+
+          <div class="drop-zone" id="dropZone" tabindex="0" role="button" aria-label="Drop file zone">
+            <input type="file" id="fileInput" />
+            <div class="drop-content">
+              <p class="drop-title">Drop file to arm transfer</p>
+              <p class="drop-subtitle" id="selectedFileName">No file selected</p>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button class="btn btn-primary" id="chooseFileBtn">
+              Choose File
+            </button>
+            <button class="btn btn-primary" id="generateLinkBtn" disabled>
+              Generate Share Link
+            </button>
+            <button class="btn btn-ghost" id="copyLinkBtn" disabled>Copy Link</button>
+            <button class="btn btn-ghost" id="reconnectBtn">Reconnect</button>
+          </div>
+
+          <div class="share-link-wrap">
+            <label for="shareLink" class="status-label">Share URL</label>
+            <input type="text" id="shareLink" readonly placeholder="Link appears after selecting a file" />
+          </div>
+
+          <div class="qr-wrap glass-soft">
+            <div class="qr-head">
+              <p class="status-label">Mobile Pairing</p>
+              <button class="btn btn-ghost small" id="refreshQrBtn">Refresh QR</button>
+            </div>
+            <div class="qr-code" id="qrCode" aria-label="Share link QR code"></div>
+          </div>
+        </article>
+
+        <article class="glass panel transfer-panel">
+          <h2>Transfer Metrics</h2>
+          <div class="metric-grid">
+            <div>
+              <p class="status-label">Progress</p>
+              <p class="metric-value" id="progressText">0%</p>
+            </div>
+            <div>
+              <p class="status-label">Speed</p>
+              <p class="metric-value" id="speedText">0 MB/s</p>
+            </div>
+            <div>
+              <p class="status-label">Transferred</p>
+              <p class="metric-value" id="transferredText">0 / 0 MB</p>
+            </div>
+            <div>
+              <p class="status-label">Chunk Size</p>
+              <p class="metric-value">16 KB</p>
+            </div>
+          </div>
+
+          <div class="progress-shell" aria-label="Transfer progress bar">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+
+          <div class="peer-visual" id="peerVisual">
+            <div class="peer-node" id="peerNodeA">
+              <span>You</span>
+              <small id="peerTagA">...</small>
+            </div>
+            <div class="peer-link" id="peerLink"></div>
+            <div class="peer-node" id="peerNodeB">
+              <span>Remote</span>
+              <small id="peerTagB">...</small>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="glass panel logs-panel">
+        <div class="logs-header">
+          <h2>Live Logs</h2>
+          <button class="btn btn-ghost small" id="clearLogsBtn">Clear</button>
+        </div>
+        <div id="logConsole" class="log-console" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
